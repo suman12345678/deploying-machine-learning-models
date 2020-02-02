@@ -1,0 +1,50 @@
+skleran pipeline has transformer, predictor and pipeline
+
+PATH and PYTHONPATH
+===================
+1. Update PATH where python installed in environment variable,
+  after this you can type python and go into python terminal (doesnot matter where you present working directory in command prompt)
+  if this is not done message 'python is not recognize as internal or external command'
+
+  if python wants to look for module and packages from a project, update PYTHONPATH with that foldername
+
+VIRTUALENV
+==========
+create virtual environment to maintain different version of package for different project. DO the below in command prompt or anaconde prompt
+1. python -m venv demo_proj [venv is in standard library]
+the above will create a folder in current dir, we can install pkg there only for that environment
+2. demo_proj\Scripts\activate will activate
+3. pip install numpy
+4. deactive
+
+GITHUB
+======
+1. install git and login to github
+2. git config --global user.name suman12345678
+3. git config --global user.email suman.ju06@gmail.com
+4. git clone https://github.com/suman12345678/deploying-machine-learning-models.git ==> will create a local copy in current directory
+5. to checkout any specifi commit: 
+   login to the folder (deploying-machine-learning-models)
+   git checkout  8d79cf4212c7f736a69b6c8d0128ef77232374ea
+   so this will take the folder to initial some stage
+6. git remote set-url origin https://github.com/suman12345678/deploying-machine-learning-models.git
+pull request(set desktop with git url map before pushing)
+a. git checkout -b test-branch-2
+b. git commit --allow-empty -m "pull req"
+c. git push origin test-branch-2
+
+SETUP ML FRAMEWORK
+==================
+1. there is one setup.py we need to run that by below(Building the package, make sure you cd to root dir)
+run command: python packages\regression_model\setup.py sdist bdist_wheel
+
+2. we can install local packages : pip install -e packages\regression_model  (this will make the model importable)
+
+Once both steps are done you can do: import regression_model;regression_model.__version__
+
+
+MANIFEST.in file specify which directory we wish to include in our packages
+ 
+
+
+
