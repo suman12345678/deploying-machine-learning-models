@@ -48,7 +48,256 @@ MANIFEST.in file specify which directory we wish to include in our packages
 
 FLASK
 =====
-cd to ml_api folder then set FLASK_APP=run.py , then python run.py
+
+creating flask
+==============
+
+run by
+======
+python3 hello.py
+or
+export FLASK_APP=hello.py    [environment variable]
+flask run
+
+
+
+project structure we will seperate some code from above as all are written in hello.py. rename hello.py to routes.py. 
+=================
+sampleproject/
+
+   projenv/
+
+      ....
+
+   helloapp/
+
+       templates/
+
+          index.html  {% if user %} {% else %} {% endif %}; {% for user in users %} {% endfor %} ; can be added for conditional
+	  ==========
+		<html>
+    		<head>
+       		 <title>{{ title }}</title>
+   		</head>
+    		<body>
+        		<div>HelloApp: <a href="/">Home</a></div>
+        		<hr>
+			{% block content %}{% endblock %}   # this can be used by other html to inherit index.html
+        		<h1>Hello World!!!</h1>
+    		</body>
+		</html>
+
+          inherited.html 
+	  ==============
+		{% extends 'index.html' %}
+		{% block content %}
+  		      {% if user %}
+   		     <h1>Hello {{user}}!!!</h1>
+   		     {% else %}
+   		     <h1>Hello World!!!</h1>
+    		    {% endif %}
+		{% endblock %}
+
+
+	  adduser.html  (for webform)
+	  ============
+		{% extends 'base.html' %}
+		{% block content %}
+		    <h2 style = "text-align: center;">User Input Form</h2>
+		<form action = "" method = post>
+		         <fieldset>
+		            <legend>User Input Form</legend>
+		            {{ form.csrf_token }}
+		            <div style = "font-size:20px; font-weight:bold; margin-left:150px;" >
+		               {{ form.fname.label }} : {{ form.fname }} <br>
+				{% for error in form.fname.errors %}
+				<span style="color: red;">[{{ error }}]</span><br>
+				{% endfor %}
+			       <br>
+		               {{ form.lname.label }} : {{ form.lname }} <br>
+				{% for error in form.lname.errors %}
+				<span style="color: red;">[{{ error }}]</span><br>
+				{% endfor %}
+			       <br>
+		               {{ form.email.label }} : {{ form.email }} <br>
+				{% for error in form.email.errors %}
+				<span style="color: red;">[{{ error }}]</span><br>
+				{% endfor %}
+			       <br>
+		               {{ form.submit }}
+		            </div>
+		         </fieldset>
+		      </form>
+		{% endblock %}
+
+		
+
+       __init__.py    : 
+       ===========	
+		from flask import Flask;
+		from .config import Config;
+		from flask_sqlalchemy import SQLAlchemy;  [for database]
+		from flask_migrate import Migrate  [propagate the model class definition into the database schema]
+		app = Flask(__name__); 
+		app.config.from_object(Config)
+		db = SQLAlchemy(app)
+		migrate = Migrate(app, db)
+		from helloapp import routes
+
+       routes.py
+       =========
+		from flask import Flask [will be remove to other location  __init__  of projfolder later]
+		from flask import redirect, url_for
+		from flask import render_template
+		from .forms import UserForm
+
+		@app.route("/adduser/")
+		def useradd():
+   		form = UserForm()
+   		return render_template('adduser.html', title = 'User Input Form', form = form)
+
+		@app.route("/")
+		def hello():
+ 		  return "Hello World!!!"
+
+		@app.route("/user/<username>/<int:age>/")
+		def display_age(username, age):
+		    return "Hello " + username +"!!!<br>You are " + str(age) + " years old."
+
+		@app.route("/greet/user/<uname>")
+		def greet_user(uname):
+  		 return redirect(url_for('hello_user', username=uname))
+
+		@app.route("/user/<username>/")
+		def hello_user(username):
+ 		   return '''
+		<html>
+ 		   <head>
+ 		      <title>User Page</title>
+ 		   </head>
+ 		   <body>
+  		      <h1>Hello, ''' + username + '''!!!</h1>
+  		  </body>
+		</html>'''
+
+		#Lets create a template index.html(inside templates ) of html for better structure. let's create a folder named templates in helloapp folder.
+		@app.route("/")
+		def hello():
+  		  return render_template("index.html", title="Title Page of Hello App")
+
+		@app.route("/adduser/", methods=['GET', 'POST'])  # receive form data from user
+		def useradd():
+  		 form = UserForm()
+  		 if request.method == 'POST':
+ 		      user = User(fname=form.fname.data, lname=form.lname.data, email=form.email.data)
+ 		      try:
+ 		          db.session.add(user)
+ 		          db.session.commit()
+  		     except Exception:
+  		         db.session.rollback()
+ 		      return render_template('adduser_confirmation.html', title = 'Add User Confirmation', username=form.fname.data)
+ 		  return render_template('adduser.html', title = 'User Input Form', form = form)
+
+		@app.route("/users/")
+		def display_users():
+		    users = User.query.all()
+		    fullnames = [ user.fname + ' ' + user.lname for user in users ]
+		    return render_template('users.html', users=fullnames)
+
+
+
+    main.py
+    =======
+        from helloapp import app
+    forms.py  [for web form, The belowe defined form asks user to enter first name, last name and email address as inputs.]
+    ========
+	from flask_wtf import FlaskForm
+	from wtforms import StringField, SubmitField, validators
+	class UserForm(FlaskForm):
+  	 fname = StringField("First Name",  [validators.DataRequired(), validators.Length(min=3, max=100)])
+  	 lname = StringField("Last Name", [validators.DataRequired(), validators.Length(min=3, max=100)])
+  	 email = StringField("Email", [validators.DataRequired(), validators.Email("Please provide a valid email address.")])
+  	 submit = SubmitField("Submit")
+	
+    config.py
+    ========= 
+		import os
+		basedir = os.path.abspath(os.path.dirname(__file__))
+		class Config(object):
+		    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key'  [for web form]
+ 		    # [this specify database location,If DATABASE_URL value is not defined, then SQLALCHEMY_DATABASE_URI value is set to hello.db database located in sampleproject folder.]
+		    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'hello.db') 
+		    # [is a setting which allows tracking of modifications done to database]
+		    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    models.py   #for database
+    =========
+	from helloapp import db
+	class User(db.Model):
+    		id = db.Column(db.Integer, primary_key=True)
+    		fname = db.Column(db.String(100), index=True)
+    		lname = db.Column(db.String(100), index=True)
+   		email = db.Column(db.String(120), index=True, unique=True)
+   		
+		def __repr__(self):
+       			 return "<User : {}>".format(self.fname+' '+self.lname)		
+
+
+After doing above from command line virenv: export FLASK_APP=main  [environment variable]
+now start application by : flask run
+
+
+connecting to database
+======================
+flask extension for connecting database: pip install flask-sqlalchemy
+let's create a configuration file config.py inside helloapp for sqllite database
+
+You can now create a migration repository using flask db init
+cmd: flask db env
+The command creates migrations folder with required files and folders in sampleproject.
+
+create migration: flask db migrate -m "Creating user table"
+
+
+The migration script created using : 'flask db migrate' command contains two function definitions: upgrade and downgrade.
+
+To apply the changes to a database, you have to run the command
+
+cmd: flask db upgrade
+
+inserting data
+--------------
+flask shell
+from helloapp.models import User
+user1 = User(fname="James", lname="smith", email="james@abc.com")
+user2 = User(fname="Sam", lname="Billings", email="sam@xyz.com")
+
+commit
+------
+from helloapp import db
+db.session.add(user1)
+db.session.add(user2)
+db.session.commit()
+
+query
+-----
+User.query.all()
+[<User : James smith>, <User : Sam Billings>]
+User.query.filter(User.fname == 'James').all()
+[<User : James smith>]
+
+
+flask webforms
+=============
+pip install flask-wtf
+
+
+
+
+
+
+
+
 
 
 
