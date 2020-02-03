@@ -46,5 +46,9 @@ Once both steps are done you can do: import regression_model;regression_model.__
 MANIFEST.in file specify which directory we wish to include in our packages
  
 
+FLASK
+=====
+cd to ml_api folder then set FLASK_APP=run.py , then python run.py
+
 
 
