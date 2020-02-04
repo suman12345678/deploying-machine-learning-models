@@ -49,6 +49,7 @@ MANIFEST.in file specify which directory we wish to include in our packages
 FLASK
 =====
 
+
 creating flask
 ==============
 
@@ -135,7 +136,7 @@ sampleproject/
        __init__.py    : 
        ===========	
 		from flask import Flask;
-		from .config import Config;
+		from .config import Config;   
 		from flask_sqlalchemy import SQLAlchemy;  [for database]
 		from flask_migrate import Migrate  [propagate the model class definition into the database schema]
 		app = Flask(__name__); 
@@ -149,7 +150,8 @@ sampleproject/
 		from flask import Flask [will be remove to other location  __init__  of projfolder later]
 		from flask import redirect, url_for
 		from flask import render_template
-		from .forms import UserForm
+		from .forms import UserForm   [forms.py and routes.py are in same level fo put .forms here]
+		from flask import request
 
 		@app.route("/adduser/")
 		def useradd():
@@ -189,13 +191,17 @@ sampleproject/
 		def useradd():
   		 form = UserForm()
   		 if request.method == 'POST':
+	
+		      if form.validate() == False:
+             		  return render_template('adduser.html', form=form)
+	
  		      user = User(fname=form.fname.data, lname=form.lname.data, email=form.email.data)
  		      try:
  		          db.session.add(user)
  		          db.session.commit()
   		     except Exception:
   		         db.session.rollback()
- 		      return render_template('adduser_confirmation.html', title = 'Add User Confirmation', username=form.fname.data)
+ 		     return render_template('adduser_confirmation.html', title = 'Add User Confirmation', username=form.fname.data)
  		  return render_template('adduser.html', title = 'User Input Form', form = form)
 
 		@app.route("/users/")
@@ -214,7 +220,7 @@ sampleproject/
 	from flask_wtf import FlaskForm
 	from wtforms import StringField, SubmitField, validators
 	class UserForm(FlaskForm):
-  	 fname = StringField("First Name",  [validators.DataRequired(), validators.Length(min=3, max=100)])
+  	 fname = StringField("First Name",  [validators.DataRequired(message="[This field is required.]"), validators.Length(min=3, max=100, message="[Field must be between 3 and 100 characters long.]")])
   	 lname = StringField("Last Name", [validators.DataRequired(), validators.Length(min=3, max=100)])
   	 email = StringField("Email", [validators.DataRequired(), validators.Email("Please provide a valid email address.")])
   	 submit = SubmitField("Submit")
@@ -290,10 +296,6 @@ User.query.filter(User.fname == 'James').all()
 flask webforms
 =============
 pip install flask-wtf
-
-
-
-
 
 
 
