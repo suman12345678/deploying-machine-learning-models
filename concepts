@@ -277,10 +277,9 @@ creating flask
 
 run by
 ======
-python3 hello.py
-or
-export FLASK_APP=hello.py    [environment variable]
-flask run
+
+set/export FLASK_APP=hello.py    [environment variable; where __name__=="__main__" exist]
+python3 hello.py/ flask run [to start program at 0.0.0.0:5000 ]
 
 
 
