@@ -519,6 +519,134 @@ flask webforms
 pip install flask-wtf
 
 
+DOCKER
+=======
+=======
+docker is better than VM can be allocated dynamic size container.
+its build on operating system not on physical resources(storage,ram,network,cpu) unlike Virtual machine.
+if first VM(out of 4 which built on physical device) doesnot use anything that physical resource is unutilized by other 3 VMs.
+docker makes isolation and reproducibility possible.
+
+a simple flask model app
+========================
+from flask import Flask, request
+from flasgger import Swagger   # this will give nice UI for api @ localhost:5000/apidocs then show hide that will show all operations
+import pickle
+
+app=Flask(__name)
+swagger=Swagger(app)
+
+with open('/user/rf.pickle','rb') as m:
+model=pickle.load(m)
+
+@app.route('/predict')
+def predict_iris():
+	l=request.args.get("length")
+	s=request.args.get("width")
+	prediction=model.predict(l,s)
+	return str(prediction))
+
+@app.route('/predict_file', method=['POST'])
+def predict_iris_file():
+	inputdata=pd.read_csv(request.files.get("input_file"))
+	prediction=model.predict(inputdata)
+	return str(prediction))
+
+if __name__=='__main__':
+	app.run(host='0.0.0.0',port=5000)
+
+
+essential structure base image
+==============================
+linux-->anaconda-->flask,flasgger--> docker
+using FROM command we can define
+
+docker commands
+===============
+FROM: FROM continuumio/anaconda3:4.4.0 [anaconda3 for python3]
+MAINTAINER UNP, https://unp.education
+COPY: [copy to docker container.] COPY ./flask_demo[my local files] /usr/local/python/[docker directory]
+EXPOSE: expose to world. EXPOSE 5000
+WORKDIR: specify dir of container. /usr/local/python/
+RUN: any command given here will run inside docker. pip install -r requirments.txt[all packages required]
+RUN: python -m nltk.downloader average_tagger_perceptron
+CMD: python flask-api.py. flask-api.py should be inside flask_demo folder, so is picklefile and requirments.txt   [this is for development server]
+
+For each RUN docker will create new image so 2 RUN for 2 commands so we will sqeeze as below
+RUN: pip install -r requirments.txt \
+&& python -m nltk.downloader average_tagger_perceptron
+
+save the above file as with no extension [dockerfile] inside the folder where flask_demo folder exists
+
+docker file contains
+---------------------
+FROM continuumio/anaconda3:4.4.0 
+MAINTAINER UNP, https://unp.education
+COPY ./flask_demo /usr/local/python/
+EXPOSE 5000
+WORKDIR /usr/local/python/
+RUN pip install -r requirments.txt \
+&& python -m nltk.downloader average_tagger_perceptron
+CMD python flask-api.py    
+
+0. Now keep  dockerfile and flask_demo in a place and navigate to that location. Under flask_demo  we have rf.pickle, flask-api.py and requirments.txt(flask,flasgger,mod_wsgi[for Apache]) file
+1. install docker desktop and start. in window start docker terminal
+2. navigate to folder where docker file exist
+3. in docker terminal : docker build -t rf-api . [this will run all commands in docker file, and each command will give one image in terms of alphanumeric character]
+4. Once images(like a plan) are done we can start multiple containers. 'docker images' command will show all images and there size
+   command:docker run -p 5000:5000 rf-api --> this will run
+5. now goto 0.0.0.0:5000/apidocs will show UI
+6. docker ps --> will show running containers. docker stop 'container id' --> will stop
+
+Now we will deploy in production webservers in Apache or so. Flask is not good for production
+So we need WSGI(web server gateway interface) to connect Flask and Apache. This will connect Flask 'application' with Apache 'webserver'
+When apache server is hit by user/machine request say 1000 req/sec, apache will route them to Flask via WSGI. Flask app will send response through WSGI.
+Finally Apache push back response to user/machine.
+So we will modify the last piece
+
+To move to Apache
+1. Include file flask-api.wsgi in same location as docker
+flask-api.wsgi
+----------
+import sys
+sys.path.insert(0,"/var/www/flask_predict_api")  [folder wher we place our script for apache to pickup www word is must]
+sys.path.insert(0,'/opt/conda/lib/python3.6/site-packages') [python packages environment wsgi needs to know, libraries of python so that wsgi can build bridge]
+sys.path.insert(0,'/opt/conda/bin')  [python packages environment wsgi needs to know, anaconda python installation]
+
+import os
+os.environ['PYTHONPATH']='/opt/conda/bin/python'  [pythonpath env variable is available so that apache knows which version of python to use]
+
+
+from flask-api import app as application
+
+
+2. change docker file
+FROM continuumio/anaconda3:4.4.0 
+MAINTAINER UNP, https://unp.education
+EXPOSE 8000    [this will overwrite port in flask app]
+RUN apt-get update && apt-get install -y apache2 \
+    apache2-dev \
+    vim \
+ && apt-get clean \
+ && apt-get autoremove \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /var/www/flask_predict_api/  [root folder]
+COPY ./flask-api.wsgi /var/www/flask_predict_api/flask_api.wsgi
+COPY ./flask_demo /var/www/flask_predict_api/
+RUN pip install -r requirments.txt 
+RUN /opt/conda/bin/mod_wsgi-express install-module
+RUN mod_wsgi-express setup-server flask_api.wsgi --port=8000 \  [setup server]
+    --user www-data --group www-data \
+    --server-root=/etc/mod_wsgi-express-80
+CMD /etc/mod_wsgi-express-80/apachectl start -D FOREGROUND
+
+
+3. build image and run: docker build -t apache-flask . [apache-flask is name of image]
+4. run containers which leverages this image: docker run -d -p 8000:8000 apache-flask   [-d means start a deamon, p means local host port 8000 to bind to docker 8000 port, apache-flask is image name from above]
+5. we can see actual containers: docker exec -it 'PORTS/container id' bash. We can do a ls to see list of files. TO see log vim /var/log/apache2/erro.log.
+   if not found goto /etc/mod_wsgi-express-80 directory and then vim error_log, can see some log
+
+
 
 
 
