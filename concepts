@@ -694,6 +694,17 @@ RUN pip install -r requirments.txt \
 && python -m nltk.downloader average_tagger_perceptron
 CMD python flask-api.py    
 
+docker contains(from medium blog). Docker contanirize the code in one place to make independent
+---------------------------------
+FROM python:3.6-slim
+COPY ./app.py /deploy/      --> copy from application dir ./app.py to docker curdur /deploy/ 
+COPY ./requirements.txt /deploy/
+COPY ./iris_trained_model.pkl /deploy/
+WORKDIR /deploy/
+RUN pip install -r requirements.txt
+EXPOSE 80
+ENTRYPOINT ["python", "app.py"]
+
 0. Now keep  dockerfile and flask_demo in a place and navigate to that location. Under flask_demo  we have rf.pickle, flask-api.py and requirments.txt(flask,flasgger,mod_wsgi[for Apache]) file
 1. install docker desktop and start. in window start docker terminal
 2. navigate to folder where docker file exist
