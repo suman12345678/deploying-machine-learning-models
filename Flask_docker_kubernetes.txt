@@ -1,0 +1,71 @@
+# create a folder named: 'testing' and put flask app.py(use port 80 in code for example), 
+# Dockerfile, requirments.txt, pickle,..all other files and navigate to that folder by terminal
+
+#start docker
+sudo systemctl start docker
+
+#check docker by sample program
+sudo docker run hello-world
+
+
+#create a Dockerfile as below name it Dockerfile
+===
+FROM python:3.6
+COPY . /app
+WORKDIR /app
+COPY requirements.txt /app
+RUN pip install -r ./requirements.txt
+COPY app.py /app
+CMD ["python", "app.py"]~
+
+#authenticate 
+gcloud auth configure-docker
+
+
+#run below command==> below will build a container (pull image and install library)
+#sudo docker build -t testing:latest .   #run docker container, for any change in app run again
+docker build -t gcr.io/gaf-np-ds/testing .
+
+#check if its running
+#sudo docker run -d -p 8080:8080 testing  
+docker run --rm -p 80:80 gcr.io/gaf-np-ds/testing   ==> port 80 in flask app
+docker run -d -p 80:80 gcr.io/gaf-np-ds/testing ==> port 80 in flask app
+
+#check response
+curl http://localhost:80/  
+
+#check docker images
+docker images
+
+sudo docker ps -a  #to check status
+
+
+#Kubernetes: for clusters of machine and expose to world
+#docker: maintain container for all dependency
+
+
+#upload docker image to google container registry
+docker push gcr.io/gaf-np-ds/testing
+
+# set 2 values below (maybe optional)
+gcloud config set project gaf-np-ds 
+gcloud config set compute/zone us-central1
+
+#create kubectl  cluster(will be visible in GCP kubernetes)
+gcloud container clusters create test-cluster --num-nodes=1
+
+#deploy application in  kubernetes locally
+kubectl create deployment testing --image=gcr.io/gaf-np-ds/testing
+
+# see application running or not(run locally)
+kubectl get pods 
+
+#expose to outer world 
+kubectl expose deployment testing --type=LoadBalancer --port 80 --target-port 80
+
+#check service and externalipaddres
+kubectl get service
+
+#see external ip from above then use external ip:80 from outside world
+
+
